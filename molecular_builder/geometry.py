@@ -1,6 +1,11 @@
 import numpy as np
 from ase import Atom
+<<<<<<< HEAD
 from noise import snoise3, pnoise3, snoise2, perlin
+=======
+from noise_edited import snoise3, pnoise3, snoise4, snoise2, randomize
+from noise_edited import perlin
+>>>>>>> 36930c000b8048fb512a80adde220fe6cb1ddb26
 import random
 
 
@@ -711,8 +716,13 @@ class ProceduralSlabGeometry(Geometry):
         self.f = f
         self.threshold = threshold
         self.angle = angle
+<<<<<<< HEAD
         self.octaves = octaves
         self.kwargs = kwargs
+=======
+        self.kwargs = kwargs
+        self.kwargs['octaves'] = octaves
+>>>>>>> 36930c000b8048fb512a80adde220fe6cb1ddb26
 
     def packmol_structure(self, number, side):
         """ Make structure.
@@ -735,15 +745,23 @@ class ProceduralSlabGeometry(Geometry):
         max_values = np.max(positions * normal_inv, axis=0)
         dim_args = np.argsort(max_values)
         dims = np.sort(max_values[dim_args])
+<<<<<<< HEAD
         l1 = dims[1]
         l2 = dims[2]
         n1 = 50#int(l1)
         n2 = 100#int(l2)
+=======
+        l1 = lz
+        l2 = lx
+        n1 = 50  # int(l1)
+        n2 = 100  # int(l2)
+>>>>>>> 36930c000b8048fb512a80adde220fe6cb1ddb26
 
         grid1 = np.linspace(0, l1, n1)
         grid2 = np.linspace(0, l2, n2)
         noise_grid = np.zeros((n1, n2))
 
+<<<<<<< HEAD
         self.kwargs['repeatx'], self.kwargs['repeaty'] = l1 / self.scale, l2 / self.scale
 
         for i, x in enumerate(grid1):
@@ -764,6 +782,41 @@ class ProceduralSlabGeometry(Geometry):
             y_i = np.argmin(abs(y - grid2))
 
             noises[k] = noise_grid[x_i, y_i]
+=======
+        self.kwargs['repeatx'], self.kwargs['repeaty'] = l1 / \
+            self.scale, l2 / self.scale
+
+        # for i, x in enumerate(grid1):
+        #     for j, y in enumerate(grid2):
+        #         noise_val = self.noise(
+        #             x / self.scale, y / self.scale, **self.kwargs)  # , **self.kwargs)
+        #         if self.threshold is None:
+        #             noise_grid[i, j] += (noise_val + 1) / 2
+        #         else:
+        #             noise_grid[i, j] += noise_val > self.threshold
+
+        # noise_vals = np.array([self.noise(x / self.scale, y / self.scale, **self.kwargs)
+        #                        for y in grid2 for x in grid1])
+        noise_vals = np.array([self.noise(x / self.scale, y / self.scale, **self.kwargs)
+                               for x in grid1 for y in grid2]).reshape(n1, n2)
+#         noise_vals = snoise2(self.grid1 / self.scale, self.grid2 / self.scale, **self.kwargs)
+        noise_grid += noise_vals > self.threshold
+        # Map noise values onto individual atoms using predifined grid
+        # noises = np.empty(dist.shape)
+        # for k, atom in enumerate(atoms):
+        #     x = positions[k][dim_args[1]]
+        #     y = positions[k][dim_args[2]]
+        #     x_i = np.argmin(abs(x - grid1))
+        #     y_i = np.argmin(abs(y - grid2))
+        #
+        #     noises[k] = noise_grid[x_i, y_i]
+
+        x = positions[:, dim_args[1]]
+        y = positions[:, dim_args[2]]
+        x_i = np.argmin(abs(x - grid1.reshape(-1, 1)), axis=0)
+        y_i = np.argmin(abs(y - grid2.reshape(-1, 1)), axis=0)
+        noises = noise_grid[x_i, y_i]
+>>>>>>> 36930c000b8048fb512a80adde220fe6cb1ddb26
         # a loop is actually faster than an all-numpy implementation
         # since pnoise3/snoise3 are written in C++
         # noises = np.empty(dist.shape)
@@ -780,9 +833,197 @@ class ProceduralSlabGeometry(Geometry):
         #             noises[j] += (noise_val + 1) / 2
         #         else:
         #             noises[j] += noise_val > self.threshold
+<<<<<<< HEAD
 
+=======
+        # noises = noise_grid
+>>>>>>> 36930c000b8048fb512a80adde220fe6cb1ddb26
         noises = noises.flatten() * self.thickness
         indices = np.logical_and(
             dist.flatten() < noises, dist.flatten() < self.thickness / 2)
 
         return indices, noise_grid
+<<<<<<< HEAD
+=======
+
+
+class SineSlabGeometry(Geometry):
+    """
+    Creates a surface based on five sine waves with randomized amplitude.
+
+    """
+
+    def __init__(self, point, normal, thickness, scale, seed=0, threshold=0.0):
+        assert len(point) == len(normal), \
+            "Number of given points and normal vectors have to be equal"
+
+        self.point = np.atleast_2d(point)
+        normal = np.atleast_2d(normal)
+        self.normal = normal / np.linalg.norm(normal, axis=1)[:, np.newaxis]
+        self.thickness = thickness
+        self.threshold = threshold
+        self.scale = scale
+        np.random.seed(seed)
+
+    def __call__(self, atoms):
+        positions = atoms.get_positions()
+        lx, ly, lz = atoms.cell.lengths()
+        dist = self.distance_point_plane(self.normal, self.point, positions)
+        # find the points on plane
+        point_plane = positions + \
+            np.einsum('ij,kl->jkl', dist, self.normal)
+
+        normal_inv = -1 * (self.normal.flatten() - 1)
+
+        max_values = np.max(positions * normal_inv, axis=0)
+        dim_args = np.argsort(max_values)
+        dims = np.sort(max_values[dim_args])
+
+        l1 = lz
+        l2 = lx
+        n1 = 50  # int(l1)
+        n2 = 100  # int(l2)
+
+        grid1 = np.linspace(0, 2 * np.pi * self.scale, n1)
+        grid2 = np.linspace(0, 2 * np.pi * self.scale, n2)
+        sine_grid = np.zeros((n1, n2))
+
+        A = np.random.choice(np.linspace(-10, 10, 100), size=10)
+        b = np.random.choice(np.arange(2, 11, 2), size=10)
+
+        sine_x = np.array([a * np.sin(np.linspace(0, b[i] * np.pi * self.scale, n1))
+                           for i, a in enumerate(A[:5])]).sum(axis=0)
+        sine_y = np.array([a * np.sin(np.linspace(0, b[i + 5] * np.pi * self.scale, n2))
+                           for i, a in enumerate(A[5:])]).sum(axis=0)
+
+        sx, sy = np.meshgrid(sine_y, sine_x)
+
+        sine_grid = sx + sy
+        sine_grid += np.abs(np.min(sine_grid))
+        sine_grid /= np.max(sine_grid)
+        sine_grid = sine_grid > self.threshold
+
+        # xgrid, ygrid = np.meshgrid(np.linspace(
+        #     0, l2, n2), np.linspace(0, l1, n1))
+        # from mpl_toolkits.mplot3d import axes3d
+        # fig = plt.figure()
+        # ax3d = fig.add_subplot(111, projection='3d')
+        # surf = ax3d.plot_surface(xgrid, ygrid, sine_grid, cmap='viridis')
+        # plt.show()
+        #
+        # plt.imshow(sine_grid)
+        # plt.show()
+
+        x = positions[:, dim_args[1]]
+        y = positions[:, dim_args[2]]
+
+        x_i = np.argmin(abs(x - np.linspace(0, l1, n1).reshape(-1, 1)), axis=0)
+        y_i = np.argmin(abs(y - np.linspace(0, l2, n2).reshape(-1, 1)), axis=0)
+        sines = sine_grid[x_i, y_i]
+
+        sines = sines.flatten() * self.thickness
+        indices = np.logical_and(
+            dist.flatten() < sines, dist.flatten() < self.thickness / 2)
+
+        return indices, sine_grid
+
+
+class ImagesGeometry(Geometry):
+    """Uses predefined geometries to carve geometry.
+    """
+
+    def __init__(self, point, normal, thickness, image):
+        """
+
+        """
+        assert len(point) == len(normal), \
+            "Number of given points and normal vectors have to be equal"
+
+        self.point = np.atleast_2d(point)
+        normal = np.atleast_2d(normal)
+        self.normal = normal / np.linalg.norm(normal, axis=1)[:, np.newaxis]
+        self.thickness = thickness
+        self.image = image
+
+    def __call__(self, atoms):
+        positions = atoms.get_positions()
+        lx, ly, lz = atoms.cell.lengths()
+        dist = self.distance_point_plane(self.normal, self.point, positions)
+        # find the points on plane
+        point_plane = positions + \
+            np.einsum('ij,kl->jkl', dist, self.normal)
+
+        normal_inv = -1 * (self.normal.flatten() - 1)
+
+        max_values = np.max(positions * normal_inv, axis=0)
+        dim_args = np.argsort(max_values)
+        dims = np.sort(max_values[dim_args])
+
+        l1 = lz
+        l2 = lx
+        n1 = 50  # int(l1)
+        n2 = 100  # int(l2)
+
+        grid1 = np.linspace(0, l1, n1)
+        grid2 = np.linspace(0, l2, n2)
+
+        # image = np.zeros((50, 100))
+        # if self.p_limit is not None:
+        #     p = 0
+        #     while p < self.p_limit:
+        #         ind = np.random.choice(range(M), p=np.ones(M) * 1 / M)
+        #         image = np.where(
+        #             (image + self.asperities[ind, :, :]) > 0, 1, 0)
+        #         p = image.sum() / np.prod(img.shape)
+        # else:
+        #     ind = np.random.choice(range(M), p=np.ones(M) * 1 / M)
+        #     image = np.where((image + self.asperities[ind, :, :]) > 0, 1, 0)
+
+        geometry_grid = self.image
+
+        x = positions[:, dim_args[1]]
+        y = positions[:, dim_args[2]]
+        x_i = np.argmin(abs(x - grid1.reshape(-1, 1)), axis=0)
+        y_i = np.argmin(abs(y - grid2.reshape(-1, 1)), axis=0)
+        geometry = geometry_grid[x_i, y_i]
+
+        geometry = geometry.flatten() * self.thickness
+        indices = np.logical_and(
+            dist.flatten() < geometry, dist.flatten() < self.thickness / 2)
+
+        return indices, geometry_grid
+
+
+if __name__ == '__main__':
+    import molecular_builder as md
+    from molecular_builder.core import read_data
+    import matplotlib.pyplot as plt
+    atoms = read_data(
+        '/home/christer/GitHub/thesis/Lammps/amorphsilica/src/tools/alpha_quartz_ortho.data')
+    lx, ly, lz = atoms.cell.lengths()
+    normal = (0, 1, 0)
+    height = lz / 10
+    com = atoms.get_center_of_mass()
+    print(com)
+    com += np.asarray(normal) * height / 2
+    print(com)
+
+    no_atoms = len(atoms[[atom.index for atom in atoms if com[1] - height / 2 <=
+                          atom.position[1] <= com[1] + height / 2]])
+
+    geometry = ProceduralSlabGeometry(
+        com, normal, height, scale=40, method='simplex', threshold=0.1, seed=2, period=4096)
+
+    # geometry = SineSlabGeometry(
+    #     com, (0, 1, 0), height, scale=1, threshold=0.5)  # .__call__(atoms)
+    # plt.imshow(sine_grid)
+    # plt.show()
+    num_carved, carved = md.carve_geometry(
+        atoms, geometry, return_carved=True)
+    no_atoms_after = len(atoms[[atom.index for atom in atoms if com[1] - height / 2 <=
+                                atom.position[1] <= com[1] + height / 2]])
+    print(num_carved, no_atoms, no_atoms - no_atoms_after, )
+    print(num_carved / no_atoms)
+    carved.write('/home/christer/GitHub/test.data', format='lammps-data')
+    atoms.write('/home/christer/GitHub/test2.data', format='lammps-data')
+>>>>>>> 36930c000b8048fb512a80adde220fe6cb1ddb26
