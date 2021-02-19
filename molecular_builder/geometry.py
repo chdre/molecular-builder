@@ -1,11 +1,7 @@
 import numpy as np
 from ase import Atom
-<<<<<<< HEAD
-from noise import snoise3, pnoise3, snoise2, perlin
-=======
 from noise_edited import snoise3, pnoise3, snoise4, snoise2, randomize
 from noise_edited import perlin
->>>>>>> 36930c000b8048fb512a80adde220fe6cb1ddb26
 import random
 
 
@@ -716,13 +712,8 @@ class ProceduralSlabGeometry(Geometry):
         self.f = f
         self.threshold = threshold
         self.angle = angle
-<<<<<<< HEAD
-        self.octaves = octaves
-        self.kwargs = kwargs
-=======
         self.kwargs = kwargs
         self.kwargs['octaves'] = octaves
->>>>>>> 36930c000b8048fb512a80adde220fe6cb1ddb26
 
     def packmol_structure(self, number, side):
         """ Make structure.
@@ -745,44 +736,15 @@ class ProceduralSlabGeometry(Geometry):
         max_values = np.max(positions * normal_inv, axis=0)
         dim_args = np.argsort(max_values)
         dims = np.sort(max_values[dim_args])
-<<<<<<< HEAD
-        l1 = dims[1]
-        l2 = dims[2]
-        n1 = 50#int(l1)
-        n2 = 100#int(l2)
-=======
         l1 = lz
         l2 = lx
         n1 = 50  # int(l1)
         n2 = 100  # int(l2)
->>>>>>> 36930c000b8048fb512a80adde220fe6cb1ddb26
 
         grid1 = np.linspace(0, l1, n1)
         grid2 = np.linspace(0, l2, n2)
         noise_grid = np.zeros((n1, n2))
 
-<<<<<<< HEAD
-        self.kwargs['repeatx'], self.kwargs['repeaty'] = l1 / self.scale, l2 / self.scale
-
-        for i, x in enumerate(grid1):
-            for j, y in enumerate(grid2):
-                noise_val = self.noise(
-                    x / self.scale, y / self.scale, **self.kwargs)  # , **self.kwargs)
-                if self.threshold is None:
-                    noise_grid[i, j] += (noise_val + 1) / 2
-                else:
-                    noise_grid[i, j] += noise_val > self.threshold
-
-        # Map noise values onto individual atoms using predifined grid
-        noises = np.empty(dist.shape)
-        for k, atom in enumerate(atoms):
-            x = positions[k][dim_args[1]]
-            y = positions[k][dim_args[2]]
-            x_i = np.argmin(abs(x - grid1))
-            y_i = np.argmin(abs(y - grid2))
-
-            noises[k] = noise_grid[x_i, y_i]
-=======
         self.kwargs['repeatx'], self.kwargs['repeaty'] = l1 / \
             self.scale, l2 / self.scale
 
@@ -816,7 +778,6 @@ class ProceduralSlabGeometry(Geometry):
         x_i = np.argmin(abs(x - grid1.reshape(-1, 1)), axis=0)
         y_i = np.argmin(abs(y - grid2.reshape(-1, 1)), axis=0)
         noises = noise_grid[x_i, y_i]
->>>>>>> 36930c000b8048fb512a80adde220fe6cb1ddb26
         # a loop is actually faster than an all-numpy implementation
         # since pnoise3/snoise3 are written in C++
         # noises = np.empty(dist.shape)
@@ -833,18 +794,12 @@ class ProceduralSlabGeometry(Geometry):
         #             noises[j] += (noise_val + 1) / 2
         #         else:
         #             noises[j] += noise_val > self.threshold
-<<<<<<< HEAD
-
-=======
         # noises = noise_grid
->>>>>>> 36930c000b8048fb512a80adde220fe6cb1ddb26
         noises = noises.flatten() * self.thickness
         indices = np.logical_and(
             dist.flatten() < noises, dist.flatten() < self.thickness / 2)
 
         return indices, noise_grid
-<<<<<<< HEAD
-=======
 
 
 class SineSlabGeometry(Geometry):
@@ -1026,4 +981,3 @@ if __name__ == '__main__':
     print(num_carved / no_atoms)
     carved.write('/home/christer/GitHub/test.data', format='lammps-data')
     atoms.write('/home/christer/GitHub/test2.data', format='lammps-data')
->>>>>>> 36930c000b8048fb512a80adde220fe6cb1ddb26
